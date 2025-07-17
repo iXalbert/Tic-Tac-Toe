@@ -1,9 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+#include <assert.h>
 
 char board[3][3];
 int difficulty;
+int winningLine[3][2];
+int hasWinner = 0;
 
 void initBoard(){
 
@@ -17,6 +21,17 @@ void initBoard(){
     }
 }
 
+int isWinningCell(int i,int j){
+
+    for(int k=0;k<3;k++){
+        if(winningLine[k][0] == i && winningLine[k][1] == j){
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 void printBoard(){
 
     printf("\n");
@@ -26,7 +41,19 @@ void printBoard(){
 
         for(int j=0;j<3;j++){
 
-            printf("%c", board[i][j]);
+            char c = board[i][j];
+
+            if(hasWinner && isWinningCell(i,j)){
+                printf("\033[1;32m%c\033[0m",c);
+            }
+            else if(c == 'X')
+                printf("\033[1;31m%c\033[0m",c);
+            else if(c == 'O')
+                printf("\033[1;34m%c\033[0m",c);
+            else 
+                printf("%c",c);
+
+            //printf("%c", board[i][j]);
             if(j<2) 
                 printf(" | ");
         }
@@ -42,18 +69,56 @@ char checkWin(){
 
     for(int i=0;i<3;i++){
 
-        if(board[i][0] == board[i][1] && board[i][1] == board[i][2])
+        if(board[i][0] == board[i][1] && board[i][1] == board[i][2]){
+            
+            winningLine[0][0] = i;
+            winningLine[0][1] = 0;
+            winningLine[1][0] = i;
+            winningLine[1][1] = 1;
+            winningLine[2][0] = i;
+            winningLine[2][1] = 2;
+            hasWinner = 1;
             return board[i][0];
-        
-        if(board[0][i] == board[1][i] && board[1][i] == board[2][i])
+        }
+
+        if(board[0][i] == board[1][i] && board[1][i] == board[2][i]){
+            
+            winningLine[0][0] = 0;
+            winningLine[0][1] = i;
+            winningLine[1][0] = 1;
+            winningLine[1][1] = i;
+            winningLine[2][0] = 2;
+            winningLine[2][1] = i;
+            hasWinner = 1;
             return board[0][i];
+        }
+
     }    
 
-    if(board[0][0] == board[1][1] && board[1][1] == board[2][2])
+    if(board[0][0] == board[1][1] && board[1][1] == board[2][2]){
+        
+        winningLine[0][0] = 0; 
+        winningLine[0][1] = 0;
+        winningLine[1][0] = 1; 
+        winningLine[1][1] = 1;
+        winningLine[2][0] = 2; 
+        winningLine[2][1] = 2;
+        hasWinner = 1;
         return board[0][0];
+    }
     
-    if(board[0][2] == board[1][1] && board[1][1] == board[2][0])
+    if(board[0][2] == board[1][1] && board[1][1] == board[2][0]){
+
+        winningLine[0][0] = 0;
+        winningLine[0][1] = 2;
+        winningLine[1][0] = 1;
+        winningLine[1][1] = 1;
+        winningLine[2][0] = 2;
+        winningLine[2][1] = 0;
+        hasWinner = 1;
         return board[0][2];
+    }
+
 
     return ' ';
 }
@@ -242,9 +307,86 @@ void bestMove(){
     printf("Ai a ales pozitia %d \n", bestMove);
 }
 
+void test_checkWin(){
+
+    char t1[3][3] = {
+        {'X','X','X'},
+        {'4','5','6'},
+        {'7','8','9'}
+    };
+
+    memcpy(board,t1,sizeof(board));
+    assert(checkWin() == 'X');
+
+    char t2[3][3] = {
+        {'O','2','3'},
+        {'O','5','6'},
+        {'O','8','9'}
+    };
+
+    memcpy(board,t2,sizeof(board));
+    assert(checkWin() == 'O');
+
+    char t3[3][3] = {
+        {'O','2','3'},
+        {'4','O','6'},
+        {'7','8','O'}
+    };
+
+    memcpy(board,t3,sizeof(board));
+    assert(checkWin() == 'O');
+
+    char t4[3][3] = {
+        {'1','2','X'},
+        {'4','X','6'},
+        {'X','8','9'}
+    };
+
+    memcpy(board,t4,sizeof(board));
+    assert(checkWin() == 'X');
+
+    char t5[3][3] = {
+        {'O','X','X'},
+        {'X','X','O'},
+        {'O','O','X'}
+    };
+
+    memcpy(board,t5,sizeof(board));
+    assert(checkWin() == ' ');
+    
+    printf("\033[1;32mToate testele pentru checkWin() au trecut cu succes. \033[0m\n");
+}
+
+void test_isDraw(){
+
+    char t1[3][3] = {
+        {'X','2','3'},
+        {'4','O','6'},
+        {'X','8','9'}
+    };
+
+    memcpy(board,t1,sizeof(board));
+    assert(isDraw() == 0);
+
+    char t2[3][3] = {
+        {'O','X','X'},
+        {'O','X','O'},
+        {'X','O','X'}
+    };
+
+    memcpy(board,t2,sizeof(board));
+    assert(isDraw() == 1);
+
+    printf("\033[1;32mToate testele pentru checkWin au trecut cu succes. \033[0m \n");
+}
+
 int main(){
 
     srand(time(NULL));
+
+    test_checkWin();
+
+    test_isDraw();
 
     int modJoc;
 
@@ -280,6 +422,8 @@ int main(){
 
     winner = ' ';
 
+    hasWinner = 0;
+
     while(1){
 
         printBoard();
@@ -296,10 +440,13 @@ int main(){
                 if(difficulty == 1){
                     makeAimove('O');
                 }
-                if(difficulty == 2 && rand() % 2 == 0){
-                    makeAimove('O');
-                }else{
-                    bestMove();
+                if(difficulty == 2){
+                    if(rand() % 2 == 0){
+                        makeAimove('O');
+                    }
+                    else{
+                        bestMove();
+                    }
                 }
                 if(difficulty == 3){
                     bestMove();
