@@ -3,6 +3,7 @@
 #include <time.h>
 
 char board[3][3];
+int difficulty;
 
 void initBoard(){
 
@@ -73,7 +74,7 @@ int makeMove(char player){
 
     int pos;
 
-    printf("Jucatorul %c, alege posizita (1-9): ", player);
+    printf("Jucatorul %c, alege posizita : ", player);
     scanf("%d", &pos);
 
     if(pos < 1 || pos > 9)
@@ -94,7 +95,7 @@ int makeYourmove(char player){
 
     int pos;
 
-    printf("Jucatorul %c, alege pozitia (1-9)", player);
+    printf("Jucatorul %c, alege pozitia (1-9) : ", player);
     scanf(" %d", &pos);
 
     if(pos < 1 || pos > 9) return 0;
@@ -110,7 +111,7 @@ int makeYourmove(char player){
     return 1;
 }
 
-void makeAimove(char pleyer){
+void makeAimove(char player){
 
     int empty[9];
 
@@ -119,7 +120,7 @@ void makeAimove(char pleyer){
     for(int i=0;i<3;i++){
         for(int j=0;j<3;j++){
 
-            if(board[i][j] != 'X' || board[i][j] != 'O'){
+            if(board[i][j] != 'X' && board[i][j] != 'O'){
                 empty[count++] = (i * 3 + j + 1);   
             }
         }
@@ -134,15 +135,118 @@ void makeAimove(char pleyer){
     int row = (pos - 1) / 3;
     int col = (pos - 1) % 3;
 
-    board[row][col] = pleyer;
+    board[row][col] = player;
 
     printf("Calculatorul a ales pozitia %d \n", pos);
 
 }
 
+int evaluate(){
+
+    char winner = checkWin();
+    
+    if(winner == 'O') 
+        return +10;
+    if(winner == 'X')
+        return -10;
+
+    return 0;
+}
+
+int minmax(int depth, int isMaximing){
+
+    int score = evaluate();
+
+    if(score == 10 || score == -10){
+        return score;
+    }
+
+    if(isDraw()){
+        return 0;
+    }
+
+    if(isMaximing){
+
+        int best = -1000;
+        for(int i=0;i<3;i++){
+            for(int j=0;j<3;j++){
+                if(board[i][j] != 'X' && board[i][j] !='O'){
+
+                    char backup = board[i][j]; 
+                    board[i][j] = 'O';
+
+                    int val = minmax(depth+1,0);
+                    board[i][j] = backup;
+
+                    if( val > best )
+                    best = val;
+                    
+                }
+            }
+        }
+
+        return best;
+
+    }else{
+
+        int best = 1000;
+        for(int i=0;i<3;i++){
+            for(int j=0;j<3;j++){
+                if(board[i][j] != 'X' && board[i][j] != 'O'){
+
+                    char backup = board[i][j];
+                    board[i][j] = 'X';
+
+                    int val = minmax(depth+1,1);
+                    board[i][j] = backup;
+
+                    if(val < best)
+                        best = val;
+                }
+
+            }
+        }
+        
+        return best;
+
+    }
+}
+
+void bestMove(){
+
+    int bestVal = -1000;
+    int bestMove = -1;
+
+    for(int i=0;i<3;i++){
+        for(int j=0;j<3;j++){
+            if(board[i][j] != 'X' && board[i][j] != 'O'){
+
+                char backup = board[i][j];
+                board[i][j] = 'O';
+
+                int moveVal = minmax(0,0);
+                board[i][j] = backup;
+
+                if(moveVal > bestVal){
+                    bestVal = moveVal;
+                    bestMove = i * 3 + j + 1;
+                }
+            }
+        }
+    }
+
+    int row = (bestMove - 1) / 3;
+    int col = (bestMove - 1) % 3;
+
+    board[row][col] = 'O';
+    printf("Ai a ales pozitia %d \n", bestMove);
+}
+
 int main(){
 
     srand(time(NULL));
+
+    int modJoc;
 
     char currentPlayer;
 
@@ -153,6 +257,20 @@ int main(){
     int scoreU = 0;
     int scoreAi = 0;
     int scoreDraw = 0;
+
+    printf("Alege modul de joc : \n");
+    printf(" 1 - Pentru a juca contra AI-ului \n");
+    printf(" 2 - Pentru a juca contra unui prieten \n");
+    scanf(" %d", &modJoc);
+
+
+    if(modJoc == 1){
+    printf("Alege dificultate Ai-ului\n");
+    printf("1 - Usor(aleator)\n");
+    printf("2 - Mediu(aleatoriu sau inteligent)\n");
+    printf("3 - Greu (inteligent)");
+    scanf(" %d", &difficulty);
+    }
 
     do{
 
@@ -168,11 +286,27 @@ int main(){
 
         int valideMove = 0;
 
-        if(currentPlayer == 'X'){
-            valideMove = makeYourmove('X');
+        if(modJoc == 2){
+            valideMove = makeYourmove(currentPlayer);
         }else{
-            makeAimove('O');
-            valideMove = 1;
+            if(currentPlayer == 'X'){
+                valideMove = makeYourmove('X');
+        }
+            else if(currentPlayer == 'O'){
+                if(difficulty == 1){
+                    makeAimove('O');
+                }
+                if(difficulty == 2 && rand() % 2 == 0){
+                    makeAimove('O');
+                }else{
+                    bestMove();
+                }
+                if(difficulty == 3){
+                    bestMove();
+                }
+
+                valideMove = 1;
+        }
         }
 
         if(!valideMove){
@@ -216,11 +350,11 @@ int main(){
     }
 
     printf("\n Score: \n");
-    printf(" Jucator U : %d", scoreU);
-    printf(" Jucator Ai : %d", scoreAi);
-    printf(" Remize : %d", scoreDraw);
+    printf(" Jucator U : %d\n", scoreU);
+    printf(" Jucator Ai : %d\n", scoreAi);
+    printf(" Remize : %d\n", scoreDraw);
 
-    printf("Vrei sa continui joaca?");
+    printf("Vrei sa continui joaca?\n");
     printf("D - Da / N - Nu");
 
     scanf(" %c", &replay);
