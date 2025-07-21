@@ -1,0 +1,14 @@
+Scor : X = 1, O = 0 
+Scor : X = 2, O = 0 
+Scor : X = 2, O = 1 
+Scor : X = 1, O = 0 
+Scor : X = 2, O = 0 
+Scor : X = 1, O = 0 
+Scor : X = 2, O = 0 
+Scor : X = 1, O = 0 
+Scor : X = 1, O = 0 
+Scor : X = 1, O = 0 
+Scor : X = 2, O = 0 
+Scor : X = 1, O = 0 
+Scor : X = 1, O = 0 
+Scor : X = 1, O = 0 
