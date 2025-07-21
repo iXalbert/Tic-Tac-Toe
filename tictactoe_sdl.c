@@ -2,8 +2,25 @@
 #include <string.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_audio.h>
 #include <math.h>
 #include <assert.h>
+
+#define CELL_SIZE 200
+#define ANIM_STEPS 10
+#define ANIM_DELAY 20
+
+SDL_AudioSpec moveSpec,winSpec;
+Uint32 moveLen,winLen;
+Uint8 *moveBuffer = NULL, *winBuffer = NULL;
+SDL_AudioDeviceID audioDevice = 0;
+int soundEnabled = 0;  // Flag to track if sound is available
+
+typedef struct{
+
+    int scorX;
+    int scorO;
+}Scoruri;
 
 char board[3][3];
 char currentPlayer = 'X';
@@ -12,10 +29,66 @@ char winner = ' ';
 char mesaj[32] = " ";
 int scoreX = 0;
 int scoreO = 0;
+char scorText[100];
+
 
 SDL_Rect restartButton = {200,700,200,60};
 
 int win_x1=-1,win_y1=-1,win_x2=-1,win_y2=-1;
+
+Scoruri scoruri = {0,0};
+
+void drawX(SDL_Renderer *renderer, int row, int col, float scale){
+
+    int size = CELL_SIZE * scale;
+
+    int offsetX = col * CELL_SIZE + (CELL_SIZE - size) / 2;
+    int offsetY = row * CELL_SIZE + (CELL_SIZE - size) / 2;
+
+    SDL_SetRenderDrawColor(renderer,255,0,0,255);
+
+    SDL_RenderDrawLine(renderer,offsetX,offsetY,offsetX + size,offsetY + size);
+    SDL_RenderDrawLine(renderer,offsetX + size,offsetY,offsetX,offsetY + size);
+}
+
+void drawO(SDL_Renderer *renderer, int row, int col, float scale){
+
+    int radius = CELL_SIZE / 2 * scale;
+
+    int centerX = col * CELL_SIZE + CELL_SIZE / 2;
+    int centerY = row * CELL_SIZE + CELL_SIZE / 2;
+
+    SDL_SetRenderDrawColor(renderer,0,0,255,255);
+
+    for(int w=0;w<2;w++){
+        int r = radius - w;
+        int dx = r - 1;
+        int dy = 0;
+        int err = dx - (r << 1);
+
+        while(dx >= dy){
+
+            SDL_RenderDrawPoint(renderer,centerX+dx,centerY+dy);
+            SDL_RenderDrawPoint(renderer,centerX+dx,centerY+dy);
+            SDL_RenderDrawPoint(renderer,centerX-dx,centerY+dy);
+            SDL_RenderDrawPoint(renderer,centerX-dx,centerY+dy);
+            SDL_RenderDrawPoint(renderer,centerX-dx,centerY-dy);
+            SDL_RenderDrawPoint(renderer,centerX-dx,centerY-dy);
+            SDL_RenderDrawPoint(renderer,centerX+dx,centerY-dy);
+            SDL_RenderDrawPoint(renderer,centerX+dx,centerY-dy);
+
+            if(err <= 0 ){
+                dy++;
+                err = err + dy * 2 + 1;
+            }
+
+            if(err > 0){
+                dx--;
+                err = err - dx * 2 + 1;
+            }
+        }
+    }
+}
 
 void resetGame(){
 
@@ -56,20 +129,24 @@ void drawXO(SDL_Renderer *renderer){
 
             if(board[row][col] == 'X'){
 
-                SDL_SetRenderDrawColor(renderer,255,0,0,255);
-                SDL_RenderDrawLine(renderer,x+20,y+20,x+cellSize-20,y+cellSize-20);
-                SDL_RenderDrawLine(renderer,x+cellSize-20,y+20,x+20,y+cellSize-20);
+                drawX(renderer,row,col,1.0f);
+                //SDL_SetRenderDrawColor(renderer,255,0,0,255);
+                //SDL_RenderDrawLine(renderer,x+20,y+20,x+cellSize-20,y+cellSize-20);
+                //SDL_RenderDrawLine(renderer,x+cellSize-20,y+20,x+20,y+cellSize-20);
             }else if(board[row][col] == 'O'){
+
+
+                drawO(renderer,row,col,1.0f);
                 //SDL_RenderDrawLine(renderer,0,0,255,255);
                 //SDL_Rect o = {x+20,y+20,cellSize-40,cellSize-40};
                 //SDL_RenderDrawRect(renderer,&o);
-                SDL_SetRenderDrawColor(renderer,0,0,255,255);
-                for(int r=0;r<360;r++){
-                    double angle = r * M_PI / 180;
-                    int px = (int)(x + 100 + 80 * cos(angle));
-                    int py = (int)(y + 100 + 80 * sin(angle));
-                    SDL_RenderDrawPoint(renderer,px,py);
-                }
+                //SDL_SetRenderDrawColor(renderer,0,0,255,255);
+                //for(int r=0;r<360;r++){
+                //    double angle = r * M_PI / 180;
+                //    int px = (int)(x + 100 + 80 * cos(angle));
+                //    int py = (int)(y + 100 + 80 * sin(angle));
+                //    SDL_RenderDrawPoint(renderer,px,py);
+                //}
             }
         }
     }
@@ -336,7 +413,7 @@ void afiseazaMesaj(SDL_Renderer* renderer, TTF_Font* font){
     }
 
     // Center the text horizontally (window width is 600)
-    int centeredX = (600 - surface->w) / 2;
+    int centeredX = (600 - surface->w) / 2;    
     SDL_Rect rect = {centeredX, 630, surface->w, surface->h};
     
     SDL_RenderCopy(renderer,texture,NULL,&rect);
@@ -369,14 +446,141 @@ void afiseazaScore(SDL_Renderer *renderer, TTF_Font *font, int scoreX, int score
         SDL_DestroyTexture(textTextureO);
 
 }
+/*
+void aninmateSymbol(SDL_Renderer* renderer, SDL_Textue* texture, SDL_Rect destRect){
+
+    for(int i=0;i<=255;i=i+15){
+
+        SDL_SetTextureAlphaMod(texture,i);
+        SDL_RenderClear(renderer);
+
+        drawBoard(renderer);
+        SDL_RenderCopy(renderer,texture,NULL,&destRect);
+        SDL_RenderPresent(renderer);
+        SDL_Delay(30);
+    }
+
+    SDL_SetTextureAlphaMod(texture,255);
+}*/
+
+void animateSymbol(SDL_Renderer* renderer, int row, int col, char symbol) {
+    // Get the font from main - we need it for rendering UI elements
+    TTF_Font *font = TTF_OpenFont("arial.ttf", 48);
+    if (!font) {
+        // If we can't load font, just do a simple animation without text
+        for (int step = 1; step <= ANIM_STEPS; step++) {
+            float scale = step / (float)ANIM_STEPS;
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            SDL_RenderClear(renderer);
+            drawGrid(renderer);
+            deseneazaTabla(renderer);
+            
+            if (symbol == 'X')
+                drawX(renderer, row, col, scale);
+            else if (symbol == 'O')
+                drawO(renderer, row, col, scale);
+
+            SDL_RenderPresent(renderer);
+            SDL_Delay(ANIM_DELAY);
+        }
+        return;
+    }
+    
+    // Store the current symbol temporarily to avoid drawing it during animation
+    char temp = board[row][col];
+    board[row][col] = ' '; // Remove it temporarily so deseneazaTabla doesn't draw it
+    
+    for (int step = 1; step <= ANIM_STEPS; step++) {
+        float scale = step / (float)ANIM_STEPS;
+        
+        // Use black background like the main render loop
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        
+        // Draw all the same elements as the main render loop
+        drawGrid(renderer);
+        deseneazaTabla(renderer); // This draws the board and existing symbols
+        afiseazaScore(renderer, font, scoreX, scoreO); // Draw the score
+        afiseazaMesaj(renderer, font); // Draw messages
+        drawRestartButton(renderer, font); // Draw restart button
+        
+        // Draw the animated symbol
+        if (symbol == 'X')
+            drawX(renderer, row, col, scale);
+        else if (symbol == 'O')
+            drawO(renderer, row, col, scale);
+
+        SDL_RenderPresent(renderer);
+        SDL_Delay(ANIM_DELAY);
+    }
+    
+    // Restore the symbol
+    board[row][col] = temp;
+    
+    // Clean up font
+    TTF_CloseFont(font);
+}
+
+void incarcareScoruri(){
+
+    FILE* f = fopen("scor.txt","r");
+    if(f){
+
+        fscanf(f," %d %d", &scoruri.scorX, &scoruri.scorO);
+        fclose(f);
+    }
+}
+
+void salveazaScor(){
+
+    FILE *f = fopen("scor.txt","w");
+    if(f){
+
+        fprintf(f," %d %d\n", scoruri.scorX, scoruri.scorO);
+        fclose(f);
+    }
+}
+
+void playSound(SDL_AudioSpec spec, Uint8 *buffer, Uint32 len){
+    // Check if buffer is NULL (sound file wasn't loaded)
+    if (buffer == NULL) {
+        return; // Silently skip sound playback
+    }
+
+    if(SDL_OpenAudio(&spec, NULL) < 0){
+        // Only show error if sound was expected to work
+        return;
+    }
+
+    SDL_PauseAudio(0);
+    SDL_QueueAudio(1,buffer,len);
+    SDL_Delay(len / (spec.freq / 1000));
+    SDL_CloseAudio();
+}
 
 int main(int argc, char **argv){
 
     ruleazaTeste();
+    incarcareScoruri();
 
     if(SDL_Init(SDL_INIT_VIDEO) != 0){
         printf("Eroare la initializarea SDL : %s\n", SDL_GetError());
         return 1;
+    }
+
+    // Try to load sound files - if they fail, the game will still work without sound
+    if(SDL_LoadWAV("move.wav",&moveSpec, &moveBuffer,&moveLen) != NULL){
+        soundEnabled = 1;  // At least one sound file loaded
+    } else {
+        fprintf(stderr,"Info: move.wav not found - game will run without move sounds\n");
+        moveBuffer = NULL;
+    }
+
+    if(SDL_LoadWAV("win.wav", &winSpec, &winBuffer,&winLen) != NULL){
+        soundEnabled = 1;  // At least one sound file loaded
+    } else {
+        fprintf(stderr,"Info: win.wav not found - game will run without win sounds\n");
+        winBuffer = NULL;
     }
 
     if(TTF_Init() == -1){
@@ -475,26 +679,35 @@ int main(int argc, char **argv){
 
                 board[row][col] = currentPlayer;
 
+                playSound(moveSpec,moveBuffer,moveLen);
+                animateSymbol(renderer,row,col,currentPlayer);
+
                 //char castigator = checkWinner(board,&x1,&x2,&y1,&y2);
 
                 char castigator = verificaCastigator(board);
 
                 if(castigator != ' '){
+                    playSound(winSpec,winBuffer,winLen);
                     winner = castigator;
                     checkWinner(board,&win_x1,&win_x2,&win_y1,&win_y2);
                     snprintf(mesaj,sizeof(mesaj),"  Jucatorul %c a castigat! \n", winner);
                     gameOver = 1;
-                    if(castigator == 'X')
+                    if(castigator == 'X'){
+                        
                         scoreX++;
-                        else
+                        salveazaScor();
+                    }else{
+
                         scoreO++;
-                    
+                        salveazaScor();
+                    }
                     FILE *f = fopen("score.txt","a");
                     if(f!= NULL){
                         fprintf(f,"Scor : X = %d, O = %d \n", scoreX,scoreO);
                         fclose(f);
                     }
                 }else if(is_Draw(board)){
+                    playSound(winSpec,winBuffer,winLen);
                     strcpy(mesaj,"Remiza! \n");
                     castigator = 'D';
                     gameOver = 1;
@@ -583,6 +796,15 @@ int main(int argc, char **argv){
 
     TTF_CloseFont(font);
     TTF_Quit();
+    
+    // Only free WAV buffers if they were loaded successfully
+    if (moveBuffer != NULL) {
+        SDL_FreeWAV(moveBuffer);
+    }
+    if (winBuffer != NULL) {
+        SDL_FreeWAV(winBuffer);
+    }
+    
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
