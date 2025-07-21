@@ -14,7 +14,7 @@ SDL_AudioSpec moveSpec,winSpec;
 Uint32 moveLen,winLen;
 Uint8 *moveBuffer = NULL, *winBuffer = NULL;
 SDL_AudioDeviceID audioDevice = 0;
-int soundEnabled = 0;  // Flag to track if sound is available
+int soundEnabled = 0;  
 
 typedef struct{
 
@@ -412,7 +412,6 @@ void afiseazaMesaj(SDL_Renderer* renderer, TTF_Font* font){
         return;
     }
 
-    // Center the text horizontally (window width is 600)
     int centeredX = (600 - surface->w) / 2;    
     SDL_Rect rect = {centeredX, 630, surface->w, surface->h};
     
@@ -464,10 +463,10 @@ void aninmateSymbol(SDL_Renderer* renderer, SDL_Textue* texture, SDL_Rect destRe
 }*/
 
 void animateSymbol(SDL_Renderer* renderer, int row, int col, char symbol) {
-    // Get the font from main - we need it for rendering UI elements
+    
     TTF_Font *font = TTF_OpenFont("arial.ttf", 48);
     if (!font) {
-        // If we can't load font, just do a simple animation without text
+        
         for (int step = 1; step <= ANIM_STEPS; step++) {
             float scale = step / (float)ANIM_STEPS;
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -486,25 +485,25 @@ void animateSymbol(SDL_Renderer* renderer, int row, int col, char symbol) {
         return;
     }
     
-    // Store the current symbol temporarily to avoid drawing it during animation
+
     char temp = board[row][col];
-    board[row][col] = ' '; // Remove it temporarily so deseneazaTabla doesn't draw it
+    board[row][col] = ' '; 
     
     for (int step = 1; step <= ANIM_STEPS; step++) {
         float scale = step / (float)ANIM_STEPS;
         
-        // Use black background like the main render loop
+        
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
         
-        // Draw all the same elements as the main render loop
-        drawGrid(renderer);
-        deseneazaTabla(renderer); // This draws the board and existing symbols
-        afiseazaScore(renderer, font, scoreX, scoreO); // Draw the score
-        afiseazaMesaj(renderer, font); // Draw messages
-        drawRestartButton(renderer, font); // Draw restart button
         
-        // Draw the animated symbol
+        drawGrid(renderer);
+        deseneazaTabla(renderer);  
+        afiseazaScore(renderer, font, scoreX, scoreO);  
+        afiseazaMesaj(renderer, font);  
+        drawRestartButton(renderer, font); 
+        
+        
         if (symbol == 'X')
             drawX(renderer, row, col, scale);
         else if (symbol == 'O')
@@ -514,10 +513,10 @@ void animateSymbol(SDL_Renderer* renderer, int row, int col, char symbol) {
         SDL_Delay(ANIM_DELAY);
     }
     
-    // Restore the symbol
+    
     board[row][col] = temp;
     
-    // Clean up font
+    
     TTF_CloseFont(font);
 }
 
@@ -542,20 +541,23 @@ void salveazaScor(){
 }
 
 void playSound(SDL_AudioSpec spec, Uint8 *buffer, Uint32 len){
-    // Check if buffer is NULL (sound file wasn't loaded)
+   
     if (buffer == NULL) {
-        return; // Silently skip sound playback
+        return;  
     }
 
+    
+    SDL_CloseAudio();
+    
     if(SDL_OpenAudio(&spec, NULL) < 0){
-        // Only show error if sound was expected to work
         return;
     }
 
     SDL_PauseAudio(0);
-    SDL_QueueAudio(1,buffer,len);
-    SDL_Delay(len / (spec.freq / 1000));
-    SDL_CloseAudio();
+    SDL_QueueAudio(1, buffer, len);
+    
+    
+    SDL_Delay(50); 
 }
 
 int main(int argc, char **argv){
@@ -563,21 +565,21 @@ int main(int argc, char **argv){
     ruleazaTeste();
     incarcareScoruri();
 
-    if(SDL_Init(SDL_INIT_VIDEO) != 0){
+    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0){
         printf("Eroare la initializarea SDL : %s\n", SDL_GetError());
         return 1;
     }
 
-    // Try to load sound files - if they fail, the game will still work without sound
+    
     if(SDL_LoadWAV("move.wav",&moveSpec, &moveBuffer,&moveLen) != NULL){
-        soundEnabled = 1;  // At least one sound file loaded
+        soundEnabled = 1; 
     } else {
         fprintf(stderr,"Info: move.wav not found - game will run without move sounds\n");
         moveBuffer = NULL;
     }
 
     if(SDL_LoadWAV("win.wav", &winSpec, &winBuffer,&winLen) != NULL){
-        soundEnabled = 1;  // At least one sound file loaded
+        soundEnabled = 1;  
     } else {
         fprintf(stderr,"Info: win.wav not found - game will run without win sounds\n");
         winBuffer = NULL;
@@ -796,8 +798,7 @@ int main(int argc, char **argv){
 
     TTF_CloseFont(font);
     TTF_Quit();
-    
-    // Only free WAV buffers if they were loaded successfully
+     
     if (moveBuffer != NULL) {
         SDL_FreeWAV(moveBuffer);
     }
