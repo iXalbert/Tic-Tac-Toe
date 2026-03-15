@@ -1,62 +1,47 @@
-#❌ Tic-Tac-Toe Collection (C & SDL2) ⭕
-##Acest repository conține două implementări distincte ale jocului Tic-Tac-Toe (X și Zero), dezvoltate în C. Proiectul explorează atât programarea grafică folosind biblioteca SDL2, cât și implementarea algoritmilor de inteligență artificială (Minimax) pentru gameplay-ul în consolă.
+# ❌ Tic-Tac-Toe Collection (C & SDL2) ⭕
 
-#🛠️ Versiuni Disponibile
-##1. Interfață Grafică (SDL2)
+O colecție de implementări ale jocului **Tic-Tac-Toe** în limbajul C, variind de la o versiune avansată cu interfață grafică (SDL2) până la o variantă de consolă cu AI imbatabil.
 
-Implementată în tictactoe_sdl.c, această versiune oferă o experiență vizuală modernă.
+---
 
-Grafică & Animații: Simboluri desenate dinamic cu efecte de scalare.
+## 🛠️ Versiuni Incluse
 
-Audio: Efecte sonore pentru mutări și victorie (move.wav, win.wav).
+### 1. Interfața Grafică (SDL2)
+Fișier principal: `tictactoe_sdl.c` (sau versiunea `_fixed.c`)
 
-Sistem de Scor: Salvarea și încărcarea automată a scorului dintr-un fișier text (scor.txt).
+* **Grafică Dinamică:** Simboluri X și O desenate prin algoritmi matematici, cu efecte de animație la plasare.
+* **Audio:** Suport pentru efecte sonore la fiecare mutare și la câștigarea jocului.
+* **Sistem de Scor:** Salvează automat progresul jucătorilor în `scor.txt`.
+* **UI Complet:** Include buton de **Restart**, mesaje de stare (ex: "Randul jucatorului X") și afișarea scorului în timp real.
 
-UI: Buton de restart funcțional și afișarea mesajelor de stare prin SDL_ttf.
+### 2. Versiunea de Consolă (AI & Logică)
+Fișier principal: `X&0.c`
 
-##2. Versiunea de Consolă (CLI + AI)
+* **Algoritm Minimax:** Include un AI inteligent care evaluează toate mutările posibile pentru a asigura un joc perfect la dificultate maximă.
+* **3 Niveluri de Dificultate:** * *Ușor:* Mutări aleatorii.
+    * *Mediu:* Mix între logică și hazard.
+    * *Greu:* AI imbatabil folosind Minimax.
+* **Vizual:** Folosește culori ANSI în terminal (Roșu pentru X, Albastru pentru O, Verde pentru linia câștigătoare).
 
-Implementată în X&0.c, axată pe logică și algoritmi.
+---
 
-AI Inteligent: Trei niveluri de dificultate:
+## 🚀 Compilare și Rulare
 
-Ușor: Mutări aleatorii.
+### Dependențe necesare
+Asigură-te că ai instalate bibliotecile de dezvoltare SDL2:
+* `SDL2`
+* `SDL2_ttf`
 
-Mediu: Combinație între joc inteligent și aleator.
+### Comenzi Consolă (Linux/macOS/MinGW)
 
-Greu: Algoritmul Minimax (nu poți câștiga împotriva lui).
-
-Colorare Terminal: Utilizarea secvențelor ANSI pentru a evidenția X (roșu), O (albastru) și linia câștigătoare (verde).
-
-#🚀 Instalare și Cerințe
-##Dependențe (pentru versiunea grafică):
-
-Pentru a compila versiunea SDL2, vei avea nevoie de:
-
-SDL2
-
-SDL2_ttf
-
-SDL2_mixer (pentru suport audio)
-
-Compilare:
-
-Pentru versiunea SDL2:
-
-Bash
+**Pentru versiunea Grafică (GUI):**
+```bash
 gcc tictactoe_sdl.c -o tictactoe_gui -lSDL2 -lSDL2_ttf -lm
-Pentru versiunea Consolă:
+./tictactoe_gui
 
-Bash
-gcc "X&0.c" -o tictactoe_cli
-#🎮 Cum se rulează?
-GUI: Asigură-te că ai fișierele arial.ttf, move.wav și win.wav în același folder cu executabilul.
+** Compilare versiunea SDL2:**
+```bash
+gcc tictactoe_sdl.c -o tictactoe_gui -lSDL2 -lSDL2_ttf -lm
+./tictactoe_gui
 
-CLI: Pur și simplu rulează ./tictactoe_cli și alege modul de joc (vs AI sau vs Prieten) direct din meniu.
-
-#🧪 Testare
-Codul include unit teste bazate pe assert() pentru a verifica corectitudinea logicii de joc:
-
-Validarea corectă a liniilor câștigătoare (orizontal, vertical, diagonal).
-
-Detectarea stării de remiză.
+---
